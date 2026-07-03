@@ -7,36 +7,62 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
+  Platform,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 
 export default function DashboardScreen() {
   const [user, setUser] = useState(null);
 
   useEffect(() => {
-    const data = localStorage.getItem("user");
-
-    if (data) {
-      setUser(JSON.parse(data));
-    } else {
-      router.replace("/login");
-    }
+    loadUser();
   }, []);
 
-  const logout = () => {
-  try {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    localStorage.removeItem("merchantType");
-    localStorage.removeItem("category");
+  const loadUser = async () => {
+    try {
+      let data = null;
 
-    console.log("Logged out successfully");
+      if (Platform.OS === "web") {
+        data = localStorage.getItem("user");
+      } else {
+        data = await AsyncStorage.getItem("user");
+      }
 
-    router.replace("/login");
-  } catch (error) {
-    console.log(error);
-  }
-};
+      if (data) {
+        setUser(JSON.parse(data));
+      } else {
+        router.replace("/login");
+      }
+    } catch (err) {
+      console.log(err);
+      router.replace("/login");
+    }
+  };
+
+  const logout = async () => {
+    try {
+      if (Platform.OS === "web") {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        localStorage.removeItem("merchantType");
+        localStorage.removeItem("category");
+      } else {
+        await AsyncStorage.multiRemove([
+          "token",
+          "user",
+          "merchantType",
+          "category",
+        ]);
+      }
+
+      Alert.alert("Success", "Logged out successfully");
+
+      router.replace("/login");
+    } catch (err) {
+      console.log(err);
+    }
+  };
 
   const greeting = () => {
     const hour = new Date().getHours();
@@ -51,18 +77,14 @@ export default function DashboardScreen() {
       style={styles.container}
       showsVerticalScrollIndicator={false}
     >
-
       {/* HEADER */}
 
       <View style={styles.header}>
-
         <View>
-          <Text style={styles.greeting}>
-            {greeting()}
-          </Text>
+          <Text style={styles.greeting}>{greeting()}</Text>
 
           <Text style={styles.name}>
-            {user?.fullname} 👋
+            {user?.fullname || "Merchant"} 👋
           </Text>
         </View>
 
@@ -78,13 +100,11 @@ export default function DashboardScreen() {
             color="#6C4CF1"
           />
         </TouchableOpacity>
-
       </View>
 
-      {/* BALANCE CARD */}
+      {/* BALANCE */}
 
       <View style={styles.balanceCard}>
-
         <Text style={styles.balanceLabel}>
           Current Balance
         </Text>
@@ -96,7 +116,6 @@ export default function DashboardScreen() {
         <Text style={styles.balanceTime}>
           Updated Just Now
         </Text>
-
       </View>
 
       {/* QUICK ACTIONS */}
@@ -106,7 +125,6 @@ export default function DashboardScreen() {
       </Text>
 
       <View style={styles.grid}>
-
         <TouchableOpacity style={styles.gridItem}>
           <Ionicons
             name="card-outline"
@@ -150,17 +168,15 @@ export default function DashboardScreen() {
             Reports
           </Text>
         </TouchableOpacity>
-
       </View>
 
-      {/* TODAY SUMMARY */}
+      {/* SUMMARY */}
 
       <Text style={styles.sectionTitle}>
         Today's Summary
       </Text>
 
       <View style={styles.summaryCard}>
-
         <View style={styles.row}>
           <Text>Total Transactions</Text>
           <Text style={styles.bold}>₹2,45,300</Text>
@@ -175,24 +191,21 @@ export default function DashboardScreen() {
           <Text>Refunds</Text>
           <Text style={styles.red}>₹25,200</Text>
         </View>
-                <TouchableOpacity
-          style={styles.insightButton}
-        >
+
+        <TouchableOpacity style={styles.insightButton}>
           <Text style={styles.insightText}>
             View All Insights →
           </Text>
         </TouchableOpacity>
-
       </View>
 
-      {/* MERCHANT DETAILS */}
+      {/* PROFILE */}
 
       <Text style={styles.sectionTitle}>
         Merchant Information
       </Text>
 
       <View style={styles.profileCard}>
-
         <View style={styles.profileRow}>
           <Text style={styles.profileLabel}>
             Merchant Name
@@ -232,7 +245,6 @@ export default function DashboardScreen() {
             {user?.category}
           </Text>
         </View>
-
       </View>
 
       {/* BUTTONS */}
@@ -253,28 +265,26 @@ export default function DashboardScreen() {
       </TouchableOpacity>
 
       <TouchableOpacity
-  style={styles.logoutButton}
-  onPress={logout}
->
-  <Ionicons
-    name="log-out-outline"
-    size={22}
-    color="#EF4444"
-  />
+        style={styles.logoutButton}
+        onPress={logout}
+      >
+        <Ionicons
+          name="log-out-outline"
+          size={22}
+          color="#fff"
+        />
 
-  <Text style={styles.logoutText}>
-    Logout
-  </Text>
-</TouchableOpacity>
+        <Text style={styles.logoutText}>
+          Logout
+        </Text>
+      </TouchableOpacity>
 
       <View style={{ height: 40 }} />
-
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-
   container: {
     flex: 1,
     backgroundColor: "#F5F7FB",
@@ -461,5 +471,4 @@ const styles = StyleSheet.create({
     fontSize: 18,
     marginLeft: 10,
   },
-
 });

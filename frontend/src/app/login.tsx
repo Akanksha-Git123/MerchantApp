@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { router } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   View,
   Text,
@@ -8,6 +9,7 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
+  Platform,
 } from "react-native";
 
 import API from "../services/api";
@@ -18,7 +20,7 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
-    if (!email || !password) {
+    if (!email.trim() || !password.trim()) {
       Alert.alert("Validation", "Please enter Email and Password");
       return;
     }
@@ -27,31 +29,55 @@ export default function LoginScreen() {
       setLoading(true);
 
       const response = await API.post("/auth/login", {
-        email,
-        password,
+        email: email.trim().toLowerCase(),
+        password: password.trim(),
       });
+
+      console.log("Login Response:", response.data);
+
+      // Save token
+      if (Platform.OS === "web") {
+        localStorage.setItem("token", response.data.token);
+        localStorage.setItem(
+          "user",
+          JSON.stringify(response.data.user)
+        );
+      } else {
+        await AsyncStorage.setItem(
+          "token",
+          response.data.token
+        );
+
+        await AsyncStorage.setItem(
+          "user",
+          JSON.stringify(response.data.user)
+        );
+      }
 
       setLoading(false);
 
-      // Save logged-in user for browser
-      localStorage.setItem("token", response.data.token);
-      localStorage.setItem(
-        "user",
-        JSON.stringify(response.data.user)
-      );
-
-      Alert.alert("Success", response.data.message);
+      Alert.alert("Success", "Login Successful");
 
       router.replace("/dashboard");
     } catch (error) {
       setLoading(false);
 
+      console.log("Login Error:", error);
+
       if (error.response) {
-        Alert.alert("Login Failed", error.response.data.message);
+        Alert.alert(
+          "Login Failed",
+          error.response.data.message
+        );
+      } else if (error.request) {
+        Alert.alert(
+          "Network Error",
+          "Unable to connect to server."
+        );
       } else {
         Alert.alert(
           "Error",
-          "Unable to connect to server"
+          error.message
         );
       }
     }
@@ -76,6 +102,7 @@ export default function LoginScreen() {
         placeholder="Enter Email"
         keyboardType="email-address"
         autoCapitalize="none"
+        autoCorrect={false}
         value={email}
         onChangeText={setEmail}
       />

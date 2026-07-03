@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { router } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
   StyleSheet,
+  Platform,
 } from "react-native";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 
@@ -13,22 +15,50 @@ export default function ProfileScreen() {
   const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
-    const data = localStorage.getItem("user");
-
-    if (data) {
-      setUser(JSON.parse(data));
-    } else {
-      router.replace("/login");
-    }
+    loadUser();
   }, []);
 
-  const logout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    localStorage.removeItem("merchantType");
-    localStorage.removeItem("category");
+  const loadUser = async () => {
+    try {
+      let data = null;
 
-    router.replace("/");
+      if (Platform.OS === "web") {
+        data = localStorage.getItem("user");
+      } else {
+        data = await AsyncStorage.getItem("user");
+      }
+
+      if (data) {
+        setUser(JSON.parse(data));
+      } else {
+        router.replace("/login");
+      }
+    } catch (error) {
+      console.log(error);
+      router.replace("/login");
+    }
+  };
+
+  const logout = async () => {
+    try {
+      if (Platform.OS === "web") {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        localStorage.removeItem("merchantType");
+        localStorage.removeItem("category");
+      } else {
+        await AsyncStorage.multiRemove([
+          "token",
+          "user",
+          "merchantType",
+          "category",
+        ]);
+      }
+
+      router.replace("/login");
+    } catch (error) {
+      console.log(error);
+    }
   };
 
   return (
@@ -36,12 +66,13 @@ export default function ProfileScreen() {
       style={styles.container}
       showsVerticalScrollIndicator={false}
     >
-      {/* HEADER */}
+
+      {/* Header */}
 
       <View style={styles.header}>
 
         <TouchableOpacity
-          onPress={() => router.replace("/dashboard")}
+          onPress={() => router.back()}
         >
           <Ionicons
             name="arrow-back"
@@ -51,27 +82,29 @@ export default function ProfileScreen() {
         </TouchableOpacity>
 
         <Text style={styles.headerTitle}>
-          My Profile
+          Profile
         </Text>
 
-        <View style={{ width: 28 }} />
+        <View style={{ width: 30 }} />
 
       </View>
 
-      {/* PROFILE */}
+      {/* Profile */}
 
       <View style={styles.profileContainer}>
 
         <View style={styles.avatar}>
+
           <Text style={styles.avatarText}>
             {user?.fullname
               ? user.fullname.charAt(0).toUpperCase()
               : "M"}
           </Text>
+
         </View>
 
         <Text style={styles.name}>
-          {user?.fullname}
+          {user?.fullname || "Merchant"}
         </Text>
 
         <Text style={styles.email}>
@@ -80,9 +113,9 @@ export default function ProfileScreen() {
 
       </View>
 
-      {/* MENU */}
+      {/* Menu */}
 
-      <View style={styles.menuCard}>
+      <View style={styles.card}>
 
         <TouchableOpacity style={styles.menuItem}>
           <View style={styles.left}>
@@ -138,6 +171,7 @@ export default function ProfileScreen() {
           </View>
 
           <View style={styles.right}>
+
             <Text style={styles.verified}>
               Verified
             </Text>
@@ -147,7 +181,9 @@ export default function ProfileScreen() {
               size={20}
               color="#999"
             />
+
           </View>
+
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.menuItem}>
@@ -210,32 +246,36 @@ export default function ProfileScreen() {
           />
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.logoutButton}
-          onPress={logout}
-        >
-          <Ionicons
-            name="log-out-outline"
-            size={22}
-            color="#EF4444"
-          />
-
-          <Text style={styles.logoutText}>
-            Logout
-          </Text>
-        </TouchableOpacity>
-
       </View>
+
+      {/* Logout */}
+
+      <TouchableOpacity
+        style={styles.logoutButton}
+        onPress={logout}
+      >
+        <Ionicons
+          name="log-out-outline"
+          size={22}
+          color="#EF4444"
+        />
+
+        <Text style={styles.logoutText}>
+          Logout
+        </Text>
+
+      </TouchableOpacity>
 
       <View style={{ height: 40 }} />
 
     </ScrollView>
   );
 }
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8F9FC",
+    backgroundColor: "#F7F8FC",
     paddingHorizontal: 20,
     paddingTop: 55,
   },
@@ -248,7 +288,7 @@ const styles = StyleSheet.create({
   },
 
   headerTitle: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: "700",
     color: "#222",
   },
@@ -259,19 +299,19 @@ const styles = StyleSheet.create({
   },
 
   avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 110,
+    height: 110,
+    borderRadius: 55,
     backgroundColor: "#6C4CF1",
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 15,
-    elevation: 5,
+    elevation: 6,
   },
 
   avatarText: {
-    fontSize: 40,
-    color: "#FFFFFF",
+    color: "#fff",
+    fontSize: 42,
     fontWeight: "700",
   },
 
@@ -279,19 +319,20 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "700",
     color: "#222",
+    marginBottom: 5,
   },
 
   email: {
     fontSize: 15,
     color: "#777",
-    marginTop: 6,
   },
 
-  menuCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 18,
-    elevation: 3,
+  card: {
+    backgroundColor: "#fff",
+    borderRadius: 20,
     overflow: "hidden",
+    elevation: 4,
+    marginBottom: 25,
   },
 
   menuItem: {
@@ -301,7 +342,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 18,
     borderBottomWidth: 1,
-    borderBottomColor: "#F2F2F2",
+    borderBottomColor: "#F1F1F1",
   },
 
   left: {
@@ -325,20 +366,25 @@ const styles = StyleSheet.create({
     color: "#22C55E",
     fontWeight: "700",
     marginRight: 8,
+    fontSize: 14,
   },
 
   logoutButton: {
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    paddingVertical: 22,
-    backgroundColor: "#FFF5F5",
+    backgroundColor: "#FFF0F0",
+    paddingVertical: 18,
+    borderRadius: 18,
+    marginBottom: 40,
+    borderWidth: 1,
+    borderColor: "#FFD5D5",
   },
 
   logoutText: {
     marginLeft: 10,
     color: "#EF4444",
-    fontWeight: "700",
     fontSize: 18,
+    fontWeight: "700",
   },
 });
